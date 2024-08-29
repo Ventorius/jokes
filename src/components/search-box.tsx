@@ -1,12 +1,14 @@
 "use client";
 
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef } from "react";
 import { Input } from "@/components/ui/input";
 
 import { ChevronDown, ChevronUp } from "lucide-react";
-import { useRouter } from "next/navigation";
-import { useDebouncedCallback } from "use-debounce";
+
 import { Joke, JokeResponse } from "@/data-layer/fetch-jokes";
+import { JokeList } from "./joke-list";
+import { useOutsideClick } from "@/hooks/use-outside-click";
+import { useDebouncedSearch } from "@/hooks/use-debounced-search";
 
 type SearchBoxProps = {
   jokes: JokeResponse;
@@ -17,35 +19,11 @@ export const SearchBox = ({ jokes, setSelectedJoke }: SearchBoxProps) => {
   const [isOpen, setIsOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
-  const router = useRouter();
   const searchBoxRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (
-        searchBoxRef.current &&
-        !searchBoxRef.current.contains(event.target as Node)
-      ) {
-        setIsOpen(false);
-      }
-    };
+  useOutsideClick(searchBoxRef, setIsOpen);
 
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
-  }, []);
-
-  const debouncedSearch = useDebouncedCallback((value: string) => {
-    if (value.trim() === "") {
-      router.push("/");
-    } else {
-      router.push(`?q=${encodeURIComponent(value)}`);
-    }
-
-    setIsLoading(false);
-    setIsOpen(true);
-  }, 300);
+  const debouncedSearch = useDebouncedSearch(setIsLoading, setIsOpen);
 
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
     setIsLoading(true);
@@ -72,18 +50,7 @@ export const SearchBox = ({ jokes, setSelectedJoke }: SearchBoxProps) => {
         onKeyDown={handleKeyDown}
       />
       {isOpen && jokes?.results?.length > 0 && (
-        <div className="absolute top-12 left-0 w-full border-2 border-gray-500 rounded-md overflow-y-auto h-[300px]">
-          {jokes?.results?.map((joke) => (
-            <div
-              key={joke.id}
-              className="m-2 p-2 rounded-md hover:bg-blue-500/20 hover:text-blue-300 overflow-hidden text-ellipsis whitespace-nowrap py-4 text-gray-300 cursor-pointer"
-              title={joke.joke}
-              onClick={() => handleSelectJoke(joke)}
-            >
-              {joke.joke}
-            </div>
-          ))}
-        </div>
+        <JokeList jokes={jokes.results} onSelectJoke={handleSelectJoke} />
       )}
     </div>
   );
